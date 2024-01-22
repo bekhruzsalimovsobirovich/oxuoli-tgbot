@@ -73,6 +73,15 @@ bot.onText(/\/start/, async (msg) => {
     });
 });
 
+// bot.onText(/\/info/, async (msg) => {
+//     const chatID = msg.chat.id;
+//     const name = msg.from.first_name;
+//
+//     await bot.sendMessage(chatID, `Bu botdan faqat <b>OSIYO XALQARO UNVERSITETI 👨‍🎓👩‍🎓</b> talabalari foydalanishi mumkin!\nBot orqali talabalar dars jadvallarini olishlari mumkin!`, {
+//         parse_mode: 'HTML',
+//     });
+// });
+
 bot.on('contact', async (msg) => {
    await bot.sendMessage(msg.chat.id, `Telefon raqamingizni baham ko'rganingiz uchun tashakkur! 😊`, {
         reply_markup: {
@@ -88,39 +97,16 @@ bot.on("message", async (msg) => {
         parse_mode: 'HTML',
     });
 
+    if(msg.text === '/info') return await bot.sendMessage(chatId, `Bu botdan faqat <b>OSIYO XALQARO UNVERSITETI 👨‍🎓👩‍🎓</b> talabalari foydalanishi mumkin!\nBot orqali talabalar dars jadvallarini olishlari mumkin!`, {
+        parse_mode: 'HTML',
+    });
+
     if (validated(msg.text)) {
         await bot.sendMessage(msg.chat.id, `Hemis ID qabul qilindi ✅`, {
             parse_mode: 'HTML'
         });
         await bot.sendMessage(msg.chat.id, `Iltimos kunni tanlang 📆\nFaqat shu oy uchun ` + date(), generateDatePicker(msg.text));
-        var text = '';
-        text = `<b>Chorshanba kuni dars jadvali: ${date()}</b>
-<b>---------------------------------------------------------</b>
-<b>1 - juftlik 🟢</b>\n
-<b>📘 S1-IQ-22</b>
-<b>🏷 Ma'ruza</b>
-<b>🚪 5/10</b>
-<b>👨‍🏫 Salimov B.S</b>
-<b>⏰ 13:30-14:50</b>\n
-<b>---------------------------------------------------------</b>
-<b>2 - juftlik 🟡</b>\n
-<b>📘 S1-IQ-22</b>
-<b>🏷 Amaliy</b>
-<b>🚪 3/5</b>
-<b>👨‍🏫 Salimov B.S</b>
-<b>⏰ 15:00-16:20</b>\n
-<b>---------------------------------------------------------</b>
-<b>3 - juftlik</b>\n
-<b>📘 S1-IQ-22</b> 
-<b>🏷 Seminar</b>
-<b>🚪 4/8</b>
-<b>👨‍🏫 Salimov B.S</b>
-<b>⏰ 16:30-17:50</b>\n
-`
-        await bot.sendMessage(msg.chat.id, text,{
-                parse_mode: 'HTML'
-            }
-        );
+
     } else {
         await bot.sendMessage(msg.chat.id, `Iltimos faqat raqamlardan foydalaning.\nHemis ID 12 raqamdan iborat bo'lishi shart❗️❗️❗️`)
     }
@@ -128,20 +114,47 @@ bot.on("message", async (msg) => {
 
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
-    const data = query.data;
-    const date = data.split(' ')[0]
-    const hemisId = data.split(' ')[1]
+    const hemisId = query.data.substr(11);
+    const date = query.data.substr(0,10);
+    var days = [
+        "Yakshanba",
+        "Dushanba",
+        "Seshanba",
+        "Chorshanba",
+        "Payshanba",
+        "Juma",
+        "Shanba"
+    ];
     // Send the selected date to your API backend
     try {
         const apiUrl = 'http://oxuoli.local/api/student/hemisID'; // Replace with your API URL
-        const response = await axios.post(apiUrl, { hemisId });
-        bot.sendMessage(chatId,
-            `${date} Chorshanba kuni dars jadvali \n📘 ${response.data.data.group.name} \n🏷 Ma'ruza\n🚪 5/10👨‍🏫 Salimov B.S\n⏰ 13:30-14:50`,
-            {
-                parse_mode: 'HTML'
-            }
-        );
-        console.log(response.data);
+        const response = await axios.post(apiUrl, { date,hemisId });
+       if(response.data.data != null){
+           var text = `<b>${days[new Date(date).getDay()]} kuni dars jadvali: ${date}</b>\n
+<b>---------------------------------------------------------</b>`;
+           var schedule = response.data.data.group.schedule_full;
+           for (let i=0; i<(schedule).length; i++){
+               text += `
+<b>${schedule[i].lesson_pair.name} - juftlik 🟢</b>\n
+<b>📘 ${schedule[i].subject.name}</b>
+<b>📘 ${response.data.data.group.name}</b>
+<b>🏷 ${schedule[i].training_type.name}</b>
+<b>🚪 ${schedule[i].auditorium.name}</b>
+<b>👨‍🏫 ${schedule[i].employee.name}</b>
+<b>⏰ ${schedule[i].lesson_pair.start_time} - ${schedule[i].lesson_pair.end_time}</b>\n
+<b>---------------------------------------------------------</b>`
+           }
+           await bot.sendMessage(chatId, text,{
+                   parse_mode: 'HTML'
+               }
+           );
+       }else{
+           await bot.sendMessage(chatId, `<b>Bunday Hemis ID ga ega foydalanuvchi mavjud emas 🙅‍♂️</b>`,{
+                   parse_mode: 'HTML'
+               }
+           );
+       }
+
     } catch (error) {
         console.error(error.message);
     }
