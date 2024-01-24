@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const token = '6358831520:AAGU2FJ9GxRxnw4h5aFi2pIgp6l3_YMtyw4';
+const host_url = 'http://d1.oxu-system.uz/api/student/hemisID';
 const bot = new TelegramBot(token, {polling: true});
 
 function validated(number) {
@@ -33,12 +34,12 @@ function generateDatePicker(hemisId) {
 
     let row = [];
     for (let day = 1; day <= daysInMonth; day++) {
-        if(day<10){
+        if (day < 10) {
             row.push({
                 text: day.toString(),
                 callback_data: `${year}-${month}-0${day}_${hemisId}`,
             });
-        }else {
+        } else {
             row.push({
                 text: day.toString(),
                 callback_data: `${year}-${month}-${day}_${hemisId}`,
@@ -54,7 +55,6 @@ function generateDatePicker(hemisId) {
 
     return keyboard;
 }
-
 
 bot.onText(/\/start/, async (msg) => {
     const chatID = msg.chat.id;
@@ -78,7 +78,7 @@ bot.onText(/\/start/, async (msg) => {
 });
 
 bot.on('contact', async (msg) => {
-   await bot.sendMessage(msg.chat.id, `Telefon raqamingizni baham ko'rganingiz uchun tashakkur! 😊`, {
+    await bot.sendMessage(msg.chat.id, `Telefon raqamingizni baham ko'rganingiz uchun tashakkur! 😊`, {
         reply_markup: {
             remove_keyboard: true,
         },
@@ -88,11 +88,11 @@ bot.on('contact', async (msg) => {
 bot.on("message", async (msg) => {
     if (msg.text === '/start') return;
     const chatId = msg.chat.id;
-    if(msg.contact) return await bot.sendMessage(chatId, `<b>Iltimos hemisdagi o'zgarmas kodingizni yuboring! 📝</b>`, {
+    if (msg.contact) return await bot.sendMessage(chatId, `<b>Iltimos hemisdagi o'zgarmas kodingizni yuboring! 📝</b>`, {
         parse_mode: 'HTML',
     });
 
-    if(msg.text === '/info') return await bot.sendMessage(chatId, `Bu botdan faqat <b>OSIYO XALQARO UNVERSITETI 👨‍🎓👩‍🎓</b> talabalari foydalanishi mumkin!\nBot orqali talabalar dars jadvallarini olishlari mumkin!`, {
+    if (msg.text === '/info') return await bot.sendMessage(chatId, `Bu botdan faqat <b>OSIYO XALQARO UNVERSITETI 👨‍🎓👩‍🎓</b> talabalari foydalanishi mumkin!\nBot orqali talabalar dars jadvallarini olishlari mumkin!`, {
         parse_mode: 'HTML',
     });
 
@@ -110,7 +110,7 @@ bot.on("message", async (msg) => {
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const hemisId = query.data.substr(11);
-    const date = query.data.substr(0,10);
+    const date = query.data.substr(0, 10);
     var days = [
         "Yakshanba",
         "Dushanba",
@@ -122,41 +122,32 @@ bot.on('callback_query', async (query) => {
     ];
     // Send the selected date to your API backend
     try {
-        const apiUrl = 'http://d1.oxu-system.uz/api/student/hemisID'; // Replace with your API URL
-        const response = await axios.post(apiUrl, { date,hemisId });
-        console.log(response.data,date)
-       if(response.data.data != null){
-           if(response.data.data.group != null){
-               var text = `<b>${days[new Date(date).getDay()]} kuni dars jadvali: ${date}</b>\n
-<b>---------------------------------------------------------</b>`;
-               var schedule = response.data.data.group.schedule_full;
-               for (let i=0; i<(schedule).length; i++){
-                   text += `
-<b>${schedule[i].lesson_pair.name} - juftlik 🟢</b>\n
-<b>📘 ${schedule[i].subject.name}</b>
-<b>📘 ${response.data.data.group.name}</b>
-<b>🏷 ${schedule[i].training_type.name}</b>
-<b>🚪 ${schedule[i].auditorium.name}</b>
-<b>👨‍🏫 ${schedule[i].employee.name}</b>
-<b>⏰ ${schedule[i].lesson_pair.start_time} - ${schedule[i].lesson_pair.end_time}</b>\n
-<b>---------------------------------------------------------</b>`
-               }
-               await bot.sendMessage(chatId, text,{
-                       parse_mode: 'HTML'
-                   }
-               );
-           }else{
-               await bot.sendMessage(chatId, `<b>Dars jadvali topilmadi 😕</b>`,{
-                       parse_mode: 'HTML'
-                   }
-               );
-           }
-       }else{
-           await bot.sendMessage(chatId, `<b>Bunday Hemis ID ga ega foydalanuvchi mavjud emas 🙅‍♂️</b>`,{
-                   parse_mode: 'HTML'
-               }
-           );
-       }
+        const response = await axios.post(host_url, {date, hemisId});
+        if (response.data.data != null) {
+            var text = `<b>${days[new Date(date).getDay()]} kuni dars jadvali: ${date}</b>\n
+<b>-----------------------------------------------</b>`;
+            var schedule = response.data.data;
+            for (let i = 0; i < (schedule).length; i++) {
+                text += `
+<b>${schedule[i].lesson_pair} - juftlik 🟢</b>\n
+<b>📘 ${schedule[i].subject}</b>
+<b>📘 ${schedule[i].group}</b>
+<b>🏷 ${schedule[i].training_type}</b>
+<b>🚪 ${schedule[i].auditorium}</b>
+<b>👨‍🏫 ${schedule[i].employee}</b>
+<b>⏰ ${schedule[i].start_time} - ${schedule[i].end_time}</b>\n
+<b>-----------------------------------------------</b>`
+            }
+            await bot.sendMessage(chatId, text, {
+                    parse_mode: 'HTML'
+                }
+            );
+        } else {
+            await bot.sendMessage(chatId, `<b>Bunday Hemis ID ga ega foydalanuvchi mavjud emas 🙅‍♂️</b>`, {
+                    parse_mode: 'HTML'
+                }
+            );
+        }
 
     } catch (error) {
         console.error(error.message);
