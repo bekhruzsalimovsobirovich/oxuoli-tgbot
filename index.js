@@ -122,7 +122,7 @@ bot.on('callback_query', async (query) => {
     ];
     // Send the selected date to your API backend
     try {
-        const apiUrl = 'http://oxuoli.local/api/student/hemisID'; // Replace with your API URL
+        const apiUrl = 'http://d1.oxu-system.uz/api/student/hemisID'; // Replace with your API URL
         const response = await axios.post(apiUrl, { date,hemisId });
         console.log(response.data,date)
        if(response.data.data != null){
